@@ -1,0 +1,9 @@
+.env*
+.git
+.codex
+.codex-tmp
+temp
+bin
+data
+*.log
+*.exe
