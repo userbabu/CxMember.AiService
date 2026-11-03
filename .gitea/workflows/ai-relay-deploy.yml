@@ -20,10 +20,15 @@ jobs:
       - name: 从内网 Gitea 检出代码
         env:
           RELEASE_SHA: ${{ gitea.sha }}
+          GITEA_TOKEN: ${{ secrets.CX_REPO_READ_TOKEN }}
+          GIT_TERMINAL_PROMPT: '0'
         run: |
           set -eu
+          test -n "${GITEA_TOKEN}"
+          GIT_AUTH_HEADER="$(printf 'oauth2:%s' "${GITEA_TOKEN}" | base64 -w0)"
           rm -rf -- source
-          git clone --depth 1 --branch main \
+          git -c http.extraheader="Authorization: Basic ${GIT_AUTH_HEADER}" \
+            clone --depth 1 --branch main \
             http://192.168.1.16:35362/cxruanjian/CxMember.AiService.git source
           git -C source checkout --detach "${RELEASE_SHA}"
 
