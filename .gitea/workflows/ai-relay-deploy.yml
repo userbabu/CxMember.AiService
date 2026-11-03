@@ -1,0 +1,39 @@
+name: AI 中转服务部署
+run-name: AI 中转服务部署 - ${{ gitea.sha }}
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-relay-deploy-${{ gitea.sha }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: cxerp-wsl-build
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 构建 AI 中转服务镜像
+        env:
+          IMAGE_TAG: ${{ gitea.sha }}
+          IMAGE_ARCHIVE: ${{ runner.temp }}/cx-ai-relay-${{ gitea.sha }}.tar.gz
+        run: |
+          set -eu
+          docker version
+          docker build --pull --tag "cx-ai-relay:${IMAGE_TAG}" .
+          docker save "cx-ai-relay:${IMAGE_TAG}" | gzip -1 > "${IMAGE_ARCHIVE}"
+
+      - name: 通过内网 SSH 上传并部署
+        env:
+          IMAGE_ARCHIVE: ${{ runner.temp }}/cx-ai-relay-${{ gitea.sha }}.tar.gz
+          RELEASE_SHA: ${{ gitea.sha }}
+        run: |
+          set -eu
+          bash deploy/deploy-remote.sh
