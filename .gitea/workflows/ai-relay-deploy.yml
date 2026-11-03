@@ -17,10 +17,18 @@ jobs:
   deploy:
     runs-on: cxerp-wsl-build
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - name: 从内网 Gitea 检出代码
+        env:
+          RELEASE_SHA: ${{ gitea.sha }}
+        run: |
+          set -eu
+          rm -rf -- source
+          git clone --depth 1 --branch main \
+            http://192.168.1.16:35362/cxruanjian/CxMember.AiService.git source
+          git -C source checkout --detach "${RELEASE_SHA}"
 
       - name: 构建 AI 中转服务镜像
+        working-directory: source
         env:
           IMAGE_TAG: ${{ gitea.sha }}
           IMAGE_ARCHIVE: ${{ runner.temp }}/cx-ai-relay-${{ gitea.sha }}.tar.gz
@@ -31,6 +39,7 @@ jobs:
           docker save "cx-ai-relay:${IMAGE_TAG}" | gzip -1 > "${IMAGE_ARCHIVE}"
 
       - name: 通过内网 SSH 上传并部署
+        working-directory: source
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/cx-ai-relay-${{ gitea.sha }}.tar.gz
           RELEASE_SHA: ${{ gitea.sha }}
