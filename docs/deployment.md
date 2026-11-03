@@ -14,7 +14,7 @@ Gitea Runner 从 Windows 凭据目录对应的 WSL 路径 `/mnt/e/dev/dotnet/CxW
 
 Runner 必须能读取该凭据文件，文件只应授权给当前 Windows 用户、SYSTEM 和本机 Administrators；WSL 挂载路径必须可用。文件格式为单行 `DATABASE_DSN`，目标必须是 `172.18.16.101:59997/cx_ec`，并启用 `charset=utf8mb4` 和 `parseTime=true`。不要将连接值放入 Gitea Actions 日志或仓库 Secret。
 
-Runner 需要 Docker、Gitea Actions `cxerp-wsl-build` 标签，以及 `/root/.ssh/cxerp-deploy.key` 和 `/root/.ssh/known_hosts` 中 `[192.168.1.21]:59999` 的服务器指纹。部署脚本支持通过 `CXAI_DEPLOY_KEY` 指定 Runner 上的 SSH 私钥路径。
+Runner 需要 Docker、Gitea Actions `cxerp-wsl-build` 标签，并预先缓存 Docker 基础镜像 `golang:1.23-bookworm`。构建使用 Runner 缓存镜像，不访问 Docker Hub。Runner 从凭据目录读取 `47.119.166.45.key`，复制到 Linux 临时目录并设置 `600` 权限，部署结束后删除临时副本；`/root/.ssh/known_hosts` 必须包含 `[192.168.1.21]:59999` 的服务器指纹。部署脚本通过 `CXAI_DEPLOY_KEY` 接收该临时路径。
 
 部署脚本要求服务器安装 Docker 和 curl。容器使用 host 网络监听 `8088`，通过 `/healthz` 验证启动；新容器未通过健康检查时会尝试恢复上一个容器。每次部署只处理 `cx-ai-relay` 容器和 `/opt/cx-ai-relay` 下上传的镜像归档，不修改数据库、其他容器或数据卷。
 

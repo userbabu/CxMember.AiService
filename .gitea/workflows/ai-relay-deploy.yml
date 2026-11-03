@@ -40,7 +40,7 @@ jobs:
         run: |
           set -eu
           docker version
-          docker build --pull --tag "cx-ai-relay:${IMAGE_TAG}" .
+          docker build --tag "cx-ai-relay:${IMAGE_TAG}" .
           docker save "cx-ai-relay:${IMAGE_TAG}" | gzip -1 > "${IMAGE_ARCHIVE}"
 
       - name: 通过内网 SSH 上传并部署
@@ -49,8 +49,14 @@ jobs:
           IMAGE_ARCHIVE: ${{ runner.temp }}/cx-ai-relay-${{ gitea.sha }}.tar.gz
           RELEASE_SHA: ${{ gitea.sha }}
           DATABASE_CREDENTIAL_FILE: /mnt/e/dev/dotnet/CxWebServer/env/credentials/cx-ai-relay-production.env
+          SSH_KEY_SOURCE: /mnt/e/dev/dotnet/CxWebServer/env/credentials/47.119.166.45.key
+          SSH_KEY_TEMP: ${{ runner.temp }}/cx-ai-relay-ssh-${{ gitea.sha }}.key
         run: |
           set -eu
+          test -r "${SSH_KEY_SOURCE}"
+          install -m 600 "${SSH_KEY_SOURCE}" "${SSH_KEY_TEMP}"
+          export CXAI_DEPLOY_KEY="${SSH_KEY_TEMP}"
+          trap 'rm -f -- "${SSH_KEY_TEMP}"' EXIT
           test -f "${DATABASE_CREDENTIAL_FILE}"
           test ! -L "${DATABASE_CREDENTIAL_FILE}"
           dsn_count="$(awk '/^DATABASE_DSN=/{count++} END {print count+0}' "${DATABASE_CREDENTIAL_FILE}")"
