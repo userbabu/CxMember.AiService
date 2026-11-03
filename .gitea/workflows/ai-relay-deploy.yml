@@ -48,6 +48,15 @@ jobs:
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/cx-ai-relay-${{ gitea.sha }}.tar.gz
           RELEASE_SHA: ${{ gitea.sha }}
+          DATABASE_CREDENTIAL_FILE: /mnt/e/dev/dotnet/CxWebServer/env/credentials/cx-ai-relay-production.env
         run: |
           set -eu
+          test -f "${DATABASE_CREDENTIAL_FILE}"
+          test ! -L "${DATABASE_CREDENTIAL_FILE}"
+          dsn_count="$(awk '/^DATABASE_DSN=/{count++} END {print count+0}' "${DATABASE_CREDENTIAL_FILE}")"
+          test "${dsn_count}" -eq 1
+          DATABASE_DSN="$(sed -n 's/^DATABASE_DSN=//p' "${DATABASE_CREDENTIAL_FILE}" | tr -d '\r')"
+          test -n "${DATABASE_DSN}"
+          printf '::add-mask::%s\n' "${DATABASE_DSN}"
+          export DATABASE_DSN
           bash deploy/deploy-remote.sh
