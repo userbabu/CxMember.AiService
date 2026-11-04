@@ -64,6 +64,11 @@ func OpenStore(dsn string) (*Store, error) {
 		db.Close()
 		return nil, errors.New("model image size migration 021 is required")
 	}
+	var modelOrderColumns int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='ai_model' AND column_name IN ('sort_order','is_default') AND is_nullable='NO'`).Scan(&modelOrderColumns); err != nil || modelOrderColumns != 2 {
+		db.Close()
+		return nil, errors.New("model order migration 023 is required")
+	}
 	var visionPricingColumns, visionSnapshotColumn int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='ai_model_pricing' AND column_name IN ('vision_input_price_micro_per_1k','vision_cache_input_price_micro_per_1k','vision_output_price_micro_per_1k','peak_vision_input_price_micro_per_1k','peak_vision_cache_input_price_micro_per_1k','peak_vision_output_price_micro_per_1k','limited_vision_input_price_micro_per_1k','limited_vision_cache_input_price_micro_per_1k','limited_vision_output_price_micro_per_1k') AND is_nullable='NO'`).Scan(&visionPricingColumns); err != nil || visionPricingColumns != 9 {
 		db.Close()

@@ -381,7 +381,7 @@ func (s *Server) quota(w http.ResponseWriter, r *http.Request) {
 		openAIError(w, 503, "service_unavailable", "quota model pricing unavailable")
 		return
 	}
-	writeSuccess(w, map[string]any{"uid": c.Subject, "status": snapshot.status, "disabled_message": snapshot.disabledMessage, "balance_credit": formatCredit(snapshot.self + snapshot.parent), "self_balance_credit": formatCredit(snapshot.self), "parent_balance_credit": formatCredit(snapshot.parent), "quota_baseline_credit": snapshot.quotaBaselineCredit, "remaining_percent": snapshot.remainingPercent, "total_credit": snapshot.totalCredit, "used_credit": snapshot.usedCredit, "used_percent": snapshot.usedPercent, "unit": "credit", "pricing_models": models})
+	writeSuccess(w, map[string]any{"uid": c.Subject, "status": snapshot.status, "disabled_message": snapshot.disabledMessage, "balance_credit": formatCredit(snapshot.self + snapshot.parent), "self_balance_credit": formatCredit(snapshot.self), "parent_balance_credit": formatCredit(snapshot.parent), "quota_baseline_credit": snapshot.quotaBaselineCredit, "remaining_percent": snapshot.remainingPercent, "total_credit": snapshot.totalCredit, "used_credit": snapshot.usedCredit, "used_percent": snapshot.usedPercent, "unit": "credit", "pricing_models": models, "default_model": defaultChatModelID(models)})
 }
 func (s *Server) usage(w http.ResponseWriter, r *http.Request) {
 	c := claimsOf(r)

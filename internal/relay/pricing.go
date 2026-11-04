@@ -104,7 +104,7 @@ func (s *Server) publicModelPrices(ctx context.Context, product string) ([]map[s
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.store.db.QueryContext(ctx, `SELECT m.model_id,m.display_name,m.model_type,m.allow_images,m.max_image_bytes,m.max_images_per_request,m.max_context_tokens,m.allow_thinking,m.reasoning_efforts,m.reasoning_format,m.input_price_micro_per_1k,m.cache_input_price_micro_per_1k,m.output_price_micro_per_1k,m.multiplier_bps,p.time_zone,p.peak_enabled,p.peak_start,p.peak_end,p.peak_input_price_micro_per_1k,p.peak_cache_input_price_micro_per_1k,p.peak_output_price_micro_per_1k,p.peak_multiplier_bps,p.limited_enabled,p.limited_start_unix,p.limited_end_unix,p.limited_input_price_micro_per_1k,p.limited_cache_input_price_micro_per_1k,p.limited_output_price_micro_per_1k,p.limited_multiplier_bps,p.vision_input_price_micro_per_1k,p.vision_cache_input_price_micro_per_1k,p.vision_output_price_micro_per_1k,p.peak_vision_input_price_micro_per_1k,p.peak_vision_cache_input_price_micro_per_1k,p.peak_vision_output_price_micro_per_1k,p.limited_vision_input_price_micro_per_1k,p.limited_vision_cache_input_price_micro_per_1k,p.limited_vision_output_price_micro_per_1k FROM ai_model m JOIN ai_model_pricing p ON p.model_id=m.model_id JOIN ai_provider v ON v.provider_id=m.provider_id AND v.enabled=1 JOIN ai_provider_credential c ON c.credential_id=m.credential_id AND c.enabled=1 WHERE m.enabled=1 AND (m.product_scope='' OR m.product_scope=?) ORDER BY m.display_name`, product)
+	rows, err := s.store.db.QueryContext(ctx, `SELECT m.model_id,m.display_name,m.model_type,m.allow_images,m.max_image_bytes,m.max_images_per_request,m.max_context_tokens,m.allow_thinking,m.reasoning_efforts,m.reasoning_format,m.input_price_micro_per_1k,m.cache_input_price_micro_per_1k,m.output_price_micro_per_1k,m.multiplier_bps,p.time_zone,p.peak_enabled,p.peak_start,p.peak_end,p.peak_input_price_micro_per_1k,p.peak_cache_input_price_micro_per_1k,p.peak_output_price_micro_per_1k,p.peak_multiplier_bps,p.limited_enabled,p.limited_start_unix,p.limited_end_unix,p.limited_input_price_micro_per_1k,p.limited_cache_input_price_micro_per_1k,p.limited_output_price_micro_per_1k,p.limited_multiplier_bps,p.vision_input_price_micro_per_1k,p.vision_cache_input_price_micro_per_1k,p.vision_output_price_micro_per_1k,p.peak_vision_input_price_micro_per_1k,p.peak_vision_cache_input_price_micro_per_1k,p.peak_vision_output_price_micro_per_1k,p.limited_vision_input_price_micro_per_1k,p.limited_vision_cache_input_price_micro_per_1k,p.limited_vision_output_price_micro_per_1k,m.is_default FROM ai_model m JOIN ai_model_pricing p ON p.model_id=m.model_id JOIN ai_provider v ON v.provider_id=m.provider_id AND v.enabled=1 JOIN ai_provider_credential c ON c.credential_id=m.credential_id AND c.enabled=1 WHERE m.enabled=1 AND (m.product_scope='' OR m.product_scope=?) ORDER BY m.is_default DESC,m.sort_order,m.display_name`, product)
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +122,9 @@ func (s *Server) publicModelPrices(ctx context.Context, product string) ([]map[s
 		var effortsJSON, reasoningFormat string
 		var input, cacheInput, output int64
 		var multiplier uint64
+		var isDefault bool
 		var p modelPricing
-		if err := rows.Scan(&id, &name, &modelType, &allowImages, &maxImageBytes, &maxImages, &maxContext, &allowThinking, &effortsJSON, &reasoningFormat, &input, &cacheInput, &output, &multiplier, &p.timeZone, &p.peakEnabled, &p.peakStart, &p.peakEnd, &p.peakInput, &p.peakCacheInput, &p.peakOutput, &p.peakMultiplier, &p.limitedEnabled, &p.limitedStart, &p.limitedEnd, &p.limitedInput, &p.limitedCacheInput, &p.limitedOutput, &p.limitedMultiplier, &p.visionInput, &p.visionCacheInput, &p.visionOutput, &p.peakVisionInput, &p.peakVisionCacheInput, &p.peakVisionOutput, &p.limitedVisionInput, &p.limitedVisionCacheInput, &p.limitedVisionOutput); err != nil {
+		if err := rows.Scan(&id, &name, &modelType, &allowImages, &maxImageBytes, &maxImages, &maxContext, &allowThinking, &effortsJSON, &reasoningFormat, &input, &cacheInput, &output, &multiplier, &p.timeZone, &p.peakEnabled, &p.peakStart, &p.peakEnd, &p.peakInput, &p.peakCacheInput, &p.peakOutput, &p.peakMultiplier, &p.limitedEnabled, &p.limitedStart, &p.limitedEnd, &p.limitedInput, &p.limitedCacheInput, &p.limitedOutput, &p.limitedMultiplier, &p.visionInput, &p.visionCacheInput, &p.visionOutput, &p.peakVisionInput, &p.peakVisionCacheInput, &p.peakVisionOutput, &p.limitedVisionInput, &p.limitedVisionCacheInput, &p.limitedVisionOutput, &isDefault); err != nil {
 			return nil, err
 		}
 		if !validModelImageCount(maxImages) {
@@ -167,9 +168,20 @@ func (s *Server) publicModelPrices(ctx context.Context, product string) ([]map[s
 		if err != nil {
 			return nil, err
 		}
-		data = append(data, map[string]any{"id": id, "object": "model", "created": 0, "owned_by": "cx", "name": name, "model_type": modelType, "allow_images": allowImages, "max_image_bytes": maxImageBytes, "max_images_per_request": maxImages, "max_context_tokens": maxContext, "context_tiers": contextTiers(maxContext), "default_context_tokens": defaultContext, "default_reasoning_effort": defaultEffort, "reasoning_efforts": efforts, "pricing": public, "vision_pricing": visionPublic, "generation": generationCatalog[id]})
+		data = append(data, map[string]any{"id": id, "object": "model", "created": 0, "owned_by": "cx", "name": name, "model_type": modelType, "allow_images": allowImages, "max_image_bytes": maxImageBytes, "max_images_per_request": maxImages, "max_context_tokens": maxContext, "context_tiers": contextTiers(maxContext), "default_context_tokens": defaultContext, "default_reasoning_effort": defaultEffort, "reasoning_efforts": efforts, "pricing": public, "vision_pricing": visionPublic, "generation": generationCatalog[id], "is_default": isDefault})
 	}
 	return data, rows.Err()
+}
+
+// 默认模型只在当前产品可见的文本模型中取目录首位标记项，与聊天可选范围保持一致。
+func defaultChatModelID(models []map[string]any) string {
+	for _, model := range models {
+		id, _ := model["id"].(string)
+		if id != "" && model["is_default"] == true && model["model_type"] == "text" {
+			return id
+		}
+	}
+	return ""
 }
 
 func (r billingRate) publicConsumption() (map[string]any, error) {
